@@ -10,9 +10,11 @@ import torch.nn as nn
 from pytorch_nn import ShallowNeuralNetwork
 from pytorch_nn import FeatureDataset
 from pytorch_nn import train
+import config
 import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
+
 	dirname = os.path.dirname(__file__)
 	train_file = os.path.join(dirname, "../Dataset/")
 	col_file = os.path.join(dirname, "../Column_Names.txt")
@@ -23,8 +25,10 @@ if __name__ == "__main__":
 		for line in file:
 			column_names.append(line.strip())
 	
-	training_data = FeatureDataset(train_file, column_names, True)
-	train_dataloader = torch.utils.data.DataLoader(training_data, batch_size = 1, shuffle = True) #Batch Size is set to 1 for pattern learning
+	print(config.BATCH_SIZE)
+
+	#training_data = FeatureDataset(train_file, column_names, True)
+	#train_dataloader = torch.utils.data.DataLoader(training_data, batch_size = 1, shuffle = True) #Batch Size is set to 1 for pattern learning
 
 	#for X, y in train_dataloader:s
 	#	print(f"Shape of X [N, C, H, W]: {X.shape}")

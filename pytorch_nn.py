@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import Dataset
 from sklearn.preprocessing import StandardScaler
+from torch.utils.tensorboard import SummaryWriter
 
 class FeatureDataset(Dataset):
 	def __init__(self, data_path, col_names, normalization):
@@ -76,10 +77,17 @@ def train_one_epoch(model, data_loader, loss_function, optimizer, device, losses
 	losses.append(loss.item())
 
 def train(model, data_loader, loss_function, optimizer, device, epochs):
+	writer = SummaryWriter("runs") # Visiualize Training Data
 	losses = []
 	for epoch in range(epochs):
 		print(f"Epoch {epoch+1}")
 		train_one_epoch(model, data_loader, loss_function, optimizer, device, losses)
 		print("---------------------")
+		writer.add_histogram("Layer 1 Weights", model.fc1.weight, epoch)
+		writer.add_histogram("Layer 1 Bias", model.fc1.bias, epoch)
+		writer.add_histogram("Layer 2 Weights", model.fc2.weight, epoch)
+		writer.add_histogram("Layer 2 Bias", model.fc2.bias, epoch)
+	
 	print("Training is done.")
+	writer.close()
 	return losses
