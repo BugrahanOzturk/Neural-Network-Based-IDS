@@ -15,77 +15,53 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import LabelEncoder
 from torch.utils.tensorboard import SummaryWriter
 
-to_int16=["radiotap.present.reserved",
-            "wlan.fc.type_subtype",
-            "wlan.fc.ds",
-            "wlan_mgt.fixed.capabilities.cfpoll.ap",
-           	"wlan_mgt.fixed.listen_ival",
-            "wlan_mgt.fixed.status_code", 
-            "wlan_mgt.fixed.timestamp", 
-            "wlan_mgt.fixed.aid", 
-            "wlan_mgt.fixed.reason_code",
-            "wlan_mgt.fixed.auth_seq",
-            "wlan_mgt.fixed.htact", 
-            "wlan_mgt.fixed.chanwidth",
-            "wlan_mgt.tim.bmapctl.offset",
-            "wlan_mgt.country_info.environment",
-            "wlan_mgt.rsn.capabilities.ptksa_replay_counter", 
-            "wlan_mgt.rsn.capabilities.gtksa_replay_counter",
-			"wlan.qos.ack"]
-
 class FeatureDataset(Dataset):
 	def __init__(self, data_path, col_names, normalization):
 		# read csv file
-		df = pd.read_csv(data_path, sep = ",", low_memory=False)
-		df.columns = col_names
+		df = pd.read_csv(data_path, sep = ",", header=None, names=col_names, low_memory=False)
 
-		print(df.shape)
+		# DATA PREPROCESSING
+		# Replacing ? marks with None to find out how many ? marks are there in dataset
+		df.replace({"?": None}, inplace=True)
+		
+		# Dropping columns with %50 of null data
+		null_column = df.columns[df.isnull().mean() >= 0.6]
+		df.drop(null_column, axis=1, inplace=True)
+		print("Removed " + str(len(null_column)) + " columns with all NaN values.")
+		
+		# Drops rows with null data
+		df.dropna(inplace=True)
 
-		# Following steps at https://github.com/Bee-Mar/AWID-Intrusion-Detection
-		df = df.replace('?', np.nan)
-		# If over %90 of the values in a column is null, remove it
-		prev_num_cols = len(df.columns)
-		df.dropna(axis='columns', thresh=len(df.index)*0.10, inplace=True)
-		print("Removed " + str(prev_num_cols - len(df.columns)) + " columns with all NaN values.")
+		# Converting all columns to numeric value
+		for col in df.columns:
+			df[col] = pd.to_numeric(df[col], errors='ignore')
+		print(df.select_dtypes(['number']).head())
 
-		print(df.shape)
+		# Drop the columns that have %100 of its values as constant
+		x, y = df.select_dtypes(['number']), df['class']
+		constant_col = x.columns[x.mean() == x.max()]
+		x.drop(constant_col, axis=1, inplace=True)
+		print("Removed " + str(len(constant_col)) + " columns with all constant values")
 
-		# Drop the columns that have over %100 of its values as constant
-		cols_to_drop = []
-		for col in df:
-			if df[col].nunique() >= (len(df.index)):
-				cols_to_drop.append(col)
-		df.drop(columns=cols_to_drop, inplace=True)
-
-		print(df.shape)
-
+		# Traning Data Class Encoding
 		encoder = LabelEncoder()
-		for column in df:
-			if column in to_int16:
-				df[column] = df[column].apply(lambda x: int(str(x), base=16) if x != np.nan else x)
-			if column == "class":
-				df[column] = encoder.fit_transform(df[column])
-
+		y = encoder.fit_transform(y)
 		print(encoder.classes_)
-		print(df.describe())
 
 		# Normalization
 		if normalization:
-			df = (df-df.min())/(df.max()-df.min())
-
-		# Set Target Class
-		#y = df[col_names[-1]]
-		#del df[col_names[-1]]
-
-		# Set Features
-		#x = df
+			sc = StandardScaler()
+			sc.fit(x)
+			scaled_x = sc.transform(x)
+		#print(x.describe())
+		#print(x.dtypes)
 
 		# converting to torch tensors
-		#self.X_train = torch.from_numpy(x.values).float()
-		#self.y_train = torch.from_numpy(y.values).float()
+		self.X_train = torch.from_numpy(scaled_x)
+		self.y_train = torch.from_numpy(y)
 
-		#print(self.X_train)
-		#print(self.y_train)
+		print(self.X_train)
+		print(self.y_train)
 
 	def __len__(self):
 		return len(self.y_train)

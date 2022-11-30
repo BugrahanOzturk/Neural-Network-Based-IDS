@@ -25,7 +25,7 @@ if __name__ == "__main__":
 		for line in file:
 			column_names.append(line.strip())
 
-	training_data = FeatureDataset(train_file, column_names, False)
+	training_data = FeatureDataset(train_file, column_names, True)
 	#train_dataloader = torch.utils.data.DataLoader(training_data, batch_size = 1, shuffle = True) #Batch Size is set to 1 for pattern learning
 
 	#for X, y in train_dataloader:s
