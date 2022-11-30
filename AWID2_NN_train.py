@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 if __name__ == "__main__":
 
 	dirname = os.path.dirname(__file__)
-	train_file = os.path.join(dirname, "../Dataset/")
+	train_file = os.path.join(dirname, "../DATASET/AWID-ATK-R-Trn/1")
 	col_file = os.path.join(dirname, "../Column_Names.txt")
 
 	column_names = []
@@ -24,10 +24,8 @@ if __name__ == "__main__":
 	with open(col_file) as file:
 		for line in file:
 			column_names.append(line.strip())
-	
-	print(config.BATCH_SIZE)
 
-	#training_data = FeatureDataset(train_file, column_names, True)
+	training_data = FeatureDataset(train_file, column_names, False)
 	#train_dataloader = torch.utils.data.DataLoader(training_data, batch_size = 1, shuffle = True) #Batch Size is set to 1 for pattern learning
 
 	#for X, y in train_dataloader:s
