@@ -15,28 +15,29 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import LabelEncoder
 from torch.utils.tensorboard import SummaryWriter
 
-to_int16=['"radiotap.present.reserved"',
-            '"wlan.fc.type_subtype"',
-            '"wlan.fc.ds"',
-            '"wlan_mgt.fixed.capabilities.cfpoll.ap"',
-           	'"wlan_mgt.fixed.listen_ival"',
-            '"wlan_mgt.fixed.status_code"', 
-            '"wlan_mgt.fixed.timestamp"', 
-            '"wlan_mgt.fixed.aid"', 
-            '"wlan_mgt.fixed.reason_code"',
-            '"wlan_mgt.fixed.auth_seq"',
-            '"wlan_mgt.fixed.htact"', 
-            '"wlan_mgt.fixed.chanwidth"',
-            '"wlan_mgt.tim.bmapctl.offset"',
-            '"wlan_mgt.country_info.environment"',
-            '"wlan_mgt.rsn.capabilities.ptksa_replay_counter"', 
-            '"wlan_mgt.rsn.capabilities.gtksa_replay_counter"',
-			'"wlan.qos.ack"' ]
+to_int16=["radiotap.present.reserved",
+            "wlan.fc.type_subtype",
+            "wlan.fc.ds",
+            "wlan_mgt.fixed.capabilities.cfpoll.ap",
+           	"wlan_mgt.fixed.listen_ival",
+            "wlan_mgt.fixed.status_code", 
+            "wlan_mgt.fixed.timestamp", 
+            "wlan_mgt.fixed.aid", 
+            "wlan_mgt.fixed.reason_code",
+            "wlan_mgt.fixed.auth_seq",
+            "wlan_mgt.fixed.htact", 
+            "wlan_mgt.fixed.chanwidth",
+            "wlan_mgt.tim.bmapctl.offset",
+            "wlan_mgt.country_info.environment",
+            "wlan_mgt.rsn.capabilities.ptksa_replay_counter", 
+            "wlan_mgt.rsn.capabilities.gtksa_replay_counter",
+			"wlan.qos.ack"]
 
 class FeatureDataset(Dataset):
 	def __init__(self, data_path, col_names, normalization):
 		# read csv file
 		df = pd.read_csv(data_path, sep = ",", low_memory=False)
+		df.columns = col_names
 
 		print(df.shape)
 
@@ -62,10 +63,10 @@ class FeatureDataset(Dataset):
 		for column in df:
 			if column in to_int16:
 				df[column] = df[column].apply(lambda x: int(str(x), base=16) if x != np.nan else x)
-			if column == '"class"':
+			if column == "class":
 				df[column] = encoder.fit_transform(df[column])
 
-		print(encoder.classes)
+		print(encoder.classes_)
 		print(df.describe())
 
 		# Normalization
