@@ -18,8 +18,8 @@ from torch.utils.tensorboard import SummaryWriter
 class FeatureDataset(Dataset):
 	def __init__(self, data_path, col_names, normalization):
 		# read csv file
-		df = pd.read_csv(data_path, sep = ",", header=None, names=col_names, low_memory=False)
-
+		df = pd.read_csv(data_path, sep = ",", header=None, low_memory=False)
+		df.columns = col_names
 		# DATA PREPROCESSING
 		# Replacing ? marks with None to find out how many ? marks are there in dataset
 		df.replace({"?": None}, inplace=True)
@@ -57,8 +57,8 @@ class FeatureDataset(Dataset):
 		#print(x.dtypes)
 
 		# converting to torch tensors
-		self.X_train = torch.from_numpy(scaled_x)
-		self.y_train = torch.from_numpy(y)
+		self.X_train = torch.from_numpy(scaled_x).float()
+		self.y_train = torch.from_numpy(y).float()
 
 		print(self.X_train)
 		print(self.y_train)
