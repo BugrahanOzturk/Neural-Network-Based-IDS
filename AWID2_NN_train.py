@@ -37,7 +37,7 @@ if __name__ == "__main__":
 	print(f"Using {device} device")
 
 	# Construct the network
-	feed_forward_net = ShallowNeuralNetwork(config.N_INPUTS, config.N_HIDDEN, config.N_OUTPUTS).to(device)
+	feed_forward_net = ShallowNeuralNetwork(config.N_INPUTS, config.N_HIDDEN1, config.N_HIDDEN2, config.N_OUTPUTS).to(device)
 
 	loss_fn = nn.MSELoss()
 	optimizer = torch.optim.SGD(feed_forward_net.parameters(), lr = config.LEARNING_RATE)

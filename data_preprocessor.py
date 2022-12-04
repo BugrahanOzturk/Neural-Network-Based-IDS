@@ -8,6 +8,7 @@ import torch
 import os
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import LabelEncoder
 
 class DataSetProcessor():
@@ -55,8 +56,11 @@ class DataSetProcessor():
             if normalization:
                 mms = MinMaxScaler()
                 # Normalize features
-                mms.fit(x)
-                scaled_x = mms.transform(x)
+                sc = StandardScaler()
+                sc.fit(x)
+                scaled_x = sc.transform(x)
+                #mms.fit(x)
+                #scaled_x = mms.transform(x)
 
                 # Normalize encoded classes
                 mms.fit(pd.DataFrame(y, columns=y_columns))
