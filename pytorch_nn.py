@@ -6,13 +6,10 @@
 import csv
 import torch
 import pandas as pd
-import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import Dataset
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import LabelEncoder
 from torch.utils.tensorboard import SummaryWriter
 
 class FeatureDataset(Dataset):
@@ -20,45 +17,14 @@ class FeatureDataset(Dataset):
 		# read csv file
 		df = pd.read_csv(data_path, sep = ",", header=None, low_memory=False)
 		df.columns = col_names
-		# DATA PREPROCESSING
-		# Replacing ? marks with None to find out how many ? marks are there in dataset
-		df.replace({"?": None}, inplace=True)
-		
-		# Dropping columns with %50 of null data
-		null_column = df.columns[df.isnull().mean() >= 0.6]
-		df.drop(null_column, axis=1, inplace=True)
-		print("Removed " + str(len(null_column)) + " columns with all NaN values.")
-		
-		# Drops rows with null data
-		df.dropna(inplace=True)
 
-		# Converting all columns to numeric value
-		for col in df.columns:
-			df[col] = pd.to_numeric(df[col], errors='ignore')
-		print(df.select_dtypes(['number']).head())
-
-		# Drop the columns that have %100 of its values as constant
-		x, y = df.select_dtypes(['number']), df['class']
-		constant_col = x.columns[x.mean() == x.max()]
-		x.drop(constant_col, axis=1, inplace=True)
-		print("Removed " + str(len(constant_col)) + " columns with all constant values")
-
-		# Traning Data Class Encoding
-		encoder = LabelEncoder()
-		y = encoder.fit_transform(y)
-		print(encoder.classes_)
-
-		# Normalization
-		if normalization:
-			sc = StandardScaler()
-			sc.fit(x)
-			scaled_x = sc.transform(x)
-		#print(x.describe())
-		#print(x.dtypes)
+		y = df[['class']]
+		del df['class']
+		x = df
 
 		# converting to torch tensors
-		self.X_train = torch.from_numpy(scaled_x).float()
-		self.y_train = torch.from_numpy(y).float()
+		self.X_train = torch.tensor(x.values).float()
+		self.y_train = torch.tensor(y.values).float()
 
 		print(self.X_train)
 		print(self.y_train)
@@ -92,7 +58,6 @@ def train_one_epoch(model, data_loader, loss_function, optimizer, device, losses
 		optimizer.zero_grad()
 		# calculate loss
 		predictions = model(inputs)
-		predictions = predictions.squeeze(-1)
 		loss = loss_function(predictions, targets)
 
 		# backpropagate loss and update weights

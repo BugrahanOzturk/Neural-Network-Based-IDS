@@ -16,8 +16,8 @@ import matplotlib.pyplot as plt
 if __name__ == "__main__":
 
 	dirname = os.path.dirname(__file__)
-	train_file = os.path.join(dirname, "../DATASET/AWID-ATK-R-Trn/1")
-	col_file = os.path.join(dirname, "../Column_Names.txt")
+	train_file = os.path.join(dirname, "../PREPROCESSED_DATA/train_data")
+	col_file = os.path.join(dirname, "../PREPROCESSED_DATA/train_columns.txt")
 
 	column_names = []
 
@@ -26,7 +26,7 @@ if __name__ == "__main__":
 			column_names.append(line.strip())
 
 	training_data = FeatureDataset(train_file, column_names, True)
-	train_dataloader = torch.utils.data.DataLoader(training_data, batch_size = 1, shuffle = True) #Batch Size is set to 1 for pattern learning
+	train_dataloader = torch.utils.data.DataLoader(training_data, batch_size = config.BATCH_SIZE, shuffle = True) #Batch Size is set to 1 for pattern learning
 
 	#for X, y in train_dataloader:
 	#	print(f"Shape of X [N, C, H, W]: {X.shape}")
@@ -53,5 +53,5 @@ if __name__ == "__main__":
 	plt.plot(losses)
 	plt.ylabel("loss")
 	plt.xlabel("epoch")
-	plt.title("Learning rate %f"%(LEARNING_RATE))
+	plt.title("Learning rate %f"%(config.LEARNING_RATE))
 	plt.show()
