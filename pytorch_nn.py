@@ -52,7 +52,7 @@ class ShallowNeuralNetwork(nn.Module):
 		return x
 
 def train_one_epoch(model, data_loader, loss_function, optimizer, device, losses):
-	epoch_loss = 0.0
+	running_loss = 0.0
 	for idx, (inputs, targets) in enumerate(data_loader):
 		inputs = inputs.to(device) 
 		targets = targets.to(device)
@@ -65,11 +65,11 @@ def train_one_epoch(model, data_loader, loss_function, optimizer, device, losses
 		#optimizer.zero_grad()
 		loss.backward()
 		optimizer.step()
-		epoch_loss += predictions.shape[0] * loss.item()
+		running_loss += loss.item() * inputs.size(0)
 
-	cur_loss = epoch_loss/len(data_loader)
-	print(f"Loss: {cur_loss}")
-	losses.append(cur_loss)
+	epoch_loss = running_loss / len(data_loader.dataset)
+	print(f"Loss: {epoch_loss}")
+	losses.append(epoch_loss)
 	#print(f"Loss: {loss.item()}")
 	#losses.append(loss.item())
 
