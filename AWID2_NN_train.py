@@ -41,7 +41,7 @@ if __name__ == "__main__":
 	optimizer = torch.optim.SGD(feed_forward_net.parameters(), lr = config.LEARNING_RATE)
 
 	# train model
-	train(feed_forward_net, train_dataloader, test_dataloader, loss_fn, optimizer, device, config.EPOCHS, validation=False)
+	train(feed_forward_net, train_dataloader, test_dataloader, loss_fn, optimizer, device, config.EPOCHS, validation=True)
 
 	# save mode
 	torch.save(feed_forward_net.state_dict(), "feedforwardnet.pth")
