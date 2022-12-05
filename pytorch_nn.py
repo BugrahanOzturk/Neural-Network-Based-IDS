@@ -13,7 +13,7 @@ from torch.utils.data import Dataset
 from torch.utils.tensorboard import SummaryWriter
 
 class FeatureDataset(Dataset):
-	def __init__(self, data_path, col_names, normalization):
+	def __init__(self, data_path, col_names):
 		# read csv file
 		df = pd.read_csv(data_path, sep = ",", header=None, low_memory=False)
 		df.columns = col_names
@@ -26,8 +26,8 @@ class FeatureDataset(Dataset):
 		self.X_train = torch.tensor(x.values).float()
 		self.y_train = torch.tensor(y.values).float()
 
-		print(self.X_train)
-		print(self.y_train)
+		#print(self.X_train)
+		#print(self.y_train)
 
 	def __len__(self):
 		return len(self.y_train)
@@ -51,34 +51,46 @@ class ShallowNeuralNetwork(nn.Module):
 		x = self.tanh(self.fc3(x))
 		return x
 
-def train_one_epoch(model, data_loader, loss_function, optimizer, device, losses):
-	running_loss = 0.0
-	for idx, (inputs, targets) in enumerate(data_loader):
+def train_one_epoch(model, train_data_loader, valid_data_loader, loss_function, optimizer, device, train_losses, valid_losses, accuracies, validation):
+	train_loss = 0.0
+	for idx, (inputs, targets) in enumerate(train_data_loader):
 		inputs = inputs.to(device) 
 		targets = targets.to(device)
-		optimizer.zero_grad()
+
 		# calculate loss
 		predictions = model(inputs)
 		loss = loss_function(predictions, targets)
 
 		# backpropagate loss and update weights
-		#optimizer.zero_grad()
-		loss.backward()
-		optimizer.step()
-		running_loss += loss.item() * inputs.size(0)
+		optimizer.zero_grad()
+		loss.backward() # Calculate Gradients
+		optimizer.step() # Update Weights
 
-	epoch_loss = running_loss / len(data_loader.dataset)
-	print(f"Loss: {epoch_loss}")
-	losses.append(epoch_loss)
-	#print(f"Loss: {loss.item()}")
-	#losses.append(loss.item())
+		# calculate total loss for the batch by average loss(sample) * batch size
+		train_loss += loss.item() * inputs.size(0)
 
-def train(model, data_loader, loss_function, optimizer, device, epochs):
+	# calculate average loss for the epoch by dividing total batch losses by number of batches
+	train_loss = train_loss/len(train_data_loader.sampler)
+	print(f"Training Loss: {train_loss}")
+	train_losses.append(train_loss)
+
+	if validation:
+		valid_loss, accuracy = check_eval(model, valid_data_loader, loss_function)
+		print(f"Validation Loss: {valid_loss}")
+		valid_losses.append(valid_loss)
+
+		print(f"Accuracy: %{accuracy}")
+		accuracies.append(accuracy)
+
+
+def train(model, train_data_loader, valid_data_loader, loss_function, optimizer, device, epochs, validation):
 	writer = SummaryWriter("runs") # Visiualize Training Data
-	losses = []
+	train_losses = []
+	valid_losses = []
+	accuracies = []
 	for epoch in range(epochs):
 		print(f"Epoch {epoch+1}")
-		train_one_epoch(model, data_loader, loss_function, optimizer, device, losses)
+		train_one_epoch(model, train_data_loader, valid_data_loader, loss_function, optimizer, device, train_losses, valid_losses, accuracies, validation)
 		print("---------------------")
 		writer.add_histogram("Layer 1 Weights", model.fc1.weight, epoch)
 		writer.add_histogram("Layer 1 Bias", model.fc1.bias, epoch)
@@ -87,8 +99,29 @@ def train(model, data_loader, loss_function, optimizer, device, epochs):
 		writer.add_histogram("Layer 3 Weights", model.fc3.weight, epoch)
 		writer.add_histogram("Layer 3 Bias", model.fc3.bias, epoch)
 
-		writer.add_scalar("Loss/Epochs", losses[epoch], epoch)
-	
+		writer.add_scalar("Training_Loss/Epochs", train_losses[epoch], epoch)
+		if validation:
+			writer.add_scalar("Validation_Loss/Epochs", valid_losses[epoch], epoch)
+			writer.add_scalar("Accuracy/Epochs", accuracies[epoch], epoch)
+
 	print("Training is done.")
 	writer.close()
-	return losses
+
+def check_eval(model, valid_data_loader, loss_function):
+	valid_loss = 0.0
+	correct_preds = 0
+	accuracy = 0
+	model.eval()
+	with torch.no_grad():
+		for idx, (inputs, targets) in enumerate(valid_data_loader):
+			#forward pass: compute predicted outputs by passing inputs to the model
+			output = model(inputs)
+			# calculate the loss
+			loss = loss_function(output, targets)
+			# update running validation loss
+			valid_loss += loss.item()*inputs.size(0)
+			correct_preds += (output == targets).sum().item()
+	
+	valid_loss = valid_loss/len(valid_data_loader.sampler)
+	accuracy = (100 * correct_preds/len(valid_data_loader.dataset))
+	return valid_loss, accuracy
