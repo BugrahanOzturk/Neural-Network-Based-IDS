@@ -35,10 +35,13 @@ if __name__ == "__main__":
 	print(f"Using {device} device")
 
 	# Construct the network
-	feed_forward_net = ShallowNeuralNetwork(config.N_INPUTS, config.N_HIDDEN1, config.N_HIDDEN2, config.N_OUTPUTS).to(device)
+	feed_forward_net = ShallowNeuralNetwork(config.N_INPUTS, config.N_HIDDEN, config.N_OUTPUTS).to(device)
+	feed_forward_net.my_device = device
 
 	loss_fn = nn.MSELoss()
+	#loss_fn = nn.BCELoss()
 	optimizer = torch.optim.SGD(feed_forward_net.parameters(), lr = config.LEARNING_RATE)
+	#optimizer = torch.optim.Adam(feed_forward_net.parameters(), lr = config.LEARNING_RATE)
 
 	# train model
 	train(feed_forward_net, train_dataloader, valid_dataloader, loss_fn, optimizer, device, config.EPOCHS, validation=True)

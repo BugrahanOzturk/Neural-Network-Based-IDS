@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import Dataset
 from torch.utils.tensorboard import SummaryWriter
-from torch_metrics import Accuracy
+from torchmetrics import Accuracy
 
 class FeatureDataset(Dataset):
     def __init__(self, data_path, col_names):
@@ -37,27 +37,26 @@ class FeatureDataset(Dataset):
         return self.X_train[idx], self.y_train[idx]
 
 class ShallowNeuralNetwork(nn.Module):
-    def __init__(self, input_num, hidden_num1, hidden_num2, output_num):
+    def __init__(self, input_num, hidden_num, output_num):
         super(ShallowNeuralNetwork, self).__init__()
-        self.fc1 = nn.Linear(input_num, hidden_num1)
-        self.fc2 = nn.Linear(hidden_num1, hidden_num2)
-        self.fc3 = nn.Linear(hidden_num2, output_num)
+        self.fc1 = nn.Linear(input_num, hidden_num)
+        self.fc2 = nn.Linear(hidden_num, output_num)
         self.tanh = nn.Tanh()
-        #self.relu = nn.ReLU()
-        #self.sigmoid = nn.Sigmoid()
+        #self.softmax = nn.Softmax(dim=0)
+        self.sigmoid = nn.Sigmoid()
+        self.my_device = torch.device('cpu') #Default to cpu
 
     def forward(self, x):
-        x = self.tanh(self.fc1(x))
-        x = self.tanh(self.fc2(x))
-        x = self.tanh(self.fc3(x))
+        x = self.sigmoid(self.fc1(x))
+        x = self.sigmoid(self.fc2(x))
         return x
 
 def train_one_epoch(model, train_data_loader, valid_data_loader, loss_function, optimizer, device, train_losses, valid_losses, accuracies):
     train_loss = 0.0
     model.train()
     for idx, (inputs, targets) in enumerate(train_data_loader):
-        inputs = inputs.to(device) 
-        targets = targets.to(device)
+        inputs = inputs.to(model.my_device, dtype=torch.float) 
+        targets = targets.to(model.my_device, dtype=torch.float)
 
         # clear the gradients
         optimizer.zero_grad()
@@ -91,13 +90,11 @@ def train(model, train_data_loader, valid_data_loader, loss_function, optimizer,
         writer.add_histogram("Layer 1 Bias", model.fc1.bias, epoch)
         writer.add_histogram("Layer 2 Weights", model.fc2.weight, epoch)
         writer.add_histogram("Layer 2 Bias", model.fc2.bias, epoch)
-        writer.add_histogram("Layer 3 Weights", model.fc3.weight, epoch)
-        writer.add_histogram("Layer 3 Bias", model.fc3.bias, epoch)
 
         writer.add_scalar("Training_Loss/Epochs", train_losses[epoch], epoch)
         
-        if validation and epoch%10 == 0 and epoch != 0:
-            valid_loss, accuracy = check_eval(model, valid_data_loader, loss_function)
+        if validation and epoch%2 == 0 and epoch != 0:
+            valid_loss, accuracy = validation_check(model, valid_data_loader, loss_function)
             print(f"Validation Loss: {valid_loss}")
             valid_losses.append(valid_loss)
             print(f"Accuracy: %{accuracy}")
@@ -111,44 +108,42 @@ def train(model, train_data_loader, valid_data_loader, loss_function, optimizer,
     print("Training is done.")
     writer.close()
 
-def check_eval(model, valid_data_loader, loss_function):
+def validation_check(model, valid_data_loader, loss_function):
     valid_loss = 0.0
-    correct_preds = 0
-    accuracy = 0
     model.eval()
+    metric = Accuracy(task='multiclass', num_classes = 4)
     with torch.no_grad():
         for idx, (inputs, targets) in enumerate(valid_data_loader):
-            
+            inputs = inputs.to(model.my_device, dtype=torch.float)
+            targets = targets.to(model.my_device, dtype=torch.float)
             #forward pass: compute predicted outputs by passing inputs to the model
             output = model(inputs)
-            output = torch.round(output, decimals=2)
             # calculate the loss
             loss = loss_function(output, targets)
             # update running validation loss
-            #output = torch.round(output, decimals=2)
-            valid_loss += loss.item()*inputs.size(0)
-            correct_preds += (output == targets).sum().item()
+            output = torch.round(output, decimals=1)
+            valid_loss += loss.item() * inputs.size(0)
+            batch_acc = metric(output, targets)
     
     valid_loss = valid_loss/len(valid_data_loader.sampler)
-    accuracy = (100 * correct_preds/len(valid_data_loader.dataset))
+    accuracy = 100*metric.compute()
+    metric.reset()
     return valid_loss, accuracy
 
 def test_model(model, test_dataloader, loss_function):
     test_loss = 0.0
-    accuracy = 0
-    correct_preds = 0
     model.eval()
-    metric = Accuracy()
-    metric.reset()
+    metric = Accuracy(task='multiclass', num_classes = 4)
     with torch.no_grad():
         for idx, (inputs, targets) in enumerate(test_dataloader):
             output = model(inputs)
             loss = loss_function(output, targets)
-            output = torch.round(output, decimals=2)
+            output = torch.round(output, decimals=1)
             test_loss += loss.item()*inputs.size(0)
             batch_acc = metric(output, targets)
             print(f"Accuracy on batch {idx}: {batch_acc}")
     
     test_loss = test_loss/len(test_dataloader.sampler)
-    accuracy = metric.compute()
+    accuracy = 100*metric.compute()
+    metric.reset()
     return test_loss, accuracy
