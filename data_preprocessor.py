@@ -7,6 +7,7 @@ import csv
 import torch
 import os
 import pandas as pd
+import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import LabelEncoder
@@ -16,7 +17,6 @@ class DataSetProcessor():
         # read csv file
         df = pd.read_csv(file_path, sep = ",", header=None, low_memory=False)
         df.columns = colnames
-
         if train_data:
             # DATA PREPROCESSING
             # Replacing ? marks with None to find out how many ? marks are there in dataset
@@ -65,6 +65,7 @@ class DataSetProcessor():
                 # Normalize encoded classes
                 mms.fit(pd.DataFrame(y, columns=y_columns))
                 scaled_y = mms.transform(pd.DataFrame(y, columns=y_columns))
+                scaled_y = np.round(scaled_y, 2)
         
             new_df = pd.concat([pd.DataFrame(scaled_x, columns=x_columns), pd.DataFrame(scaled_y, columns=y_columns)], axis=1)
             print(new_df.head())
@@ -125,7 +126,8 @@ class DataSetProcessor():
                 # Normalize encoded classes
                 mms.fit(pd.DataFrame(y, columns=y_columns))
                 scaled_y = mms.transform(pd.DataFrame(y, columns=y_columns))
-        
+                scaled_y = np.round(scaled_y, 2)
+
             new_df = pd.concat([pd.DataFrame(scaled_x, columns=x_columns), pd.DataFrame(scaled_y, columns=y_columns)], axis=1)
             print(new_df.head())
 

@@ -28,8 +28,8 @@ if __name__ == "__main__":
 	training_data = FeatureDataset(train_file, column_names)
 	train_dataloader = torch.utils.data.DataLoader(training_data, batch_size = config.BATCH_SIZE, shuffle = True) #Batch Size is set to 1 for pattern learning
 
-	test_data = FeatureDataset(test_file, column_names)
-	test_dataloader = torch.utils.data.DataLoader(test_data, batch_size = config.BATCH_SIZE, shuffle = True)
+	valid_data = FeatureDataset(test_file, column_names)
+	valid_dataloader = torch.utils.data.DataLoader(valid_data, batch_size = config.BATCH_SIZE, shuffle = True)
 
 	device = "cuda" if torch.cuda.is_available() else "cpu"
 	print(f"Using {device} device")
@@ -41,7 +41,7 @@ if __name__ == "__main__":
 	optimizer = torch.optim.SGD(feed_forward_net.parameters(), lr = config.LEARNING_RATE)
 
 	# train model
-	train(feed_forward_net, train_dataloader, test_dataloader, loss_fn, optimizer, device, config.EPOCHS, validation=True)
+	train(feed_forward_net, train_dataloader, valid_dataloader, loss_fn, optimizer, device, config.EPOCHS, validation=True)
 
 	# save mode
 	torch.save(feed_forward_net.state_dict(), "feedforwardnet.pth")
