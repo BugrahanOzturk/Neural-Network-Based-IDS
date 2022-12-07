@@ -51,7 +51,7 @@ class ShallowNeuralNetwork(nn.Module):
 
     def forward(self, x):
         x = self.sigmoid(self.fc1(x))
-        x = self.sigmoid(self.fc2(x))
+        x = self.relu(self.fc2(x))
         x = self.sigmoid(self.fc3(x))
         x = self.relu(self.fc4(x))
         return x
@@ -89,16 +89,20 @@ def train(model, train_data_loader, valid_data_loader, loss_function, optimizer,
     accuracies = []
     validation_cnt = 0
     for epoch in range(epochs):
-        print(f"Epoch {epoch+1}")
+        print(f"Epoch {epoch}")
         train_one_epoch(model, train_data_loader, valid_data_loader, loss_function, optimizer, device, train_losses, valid_losses, accuracies)
         writer.add_histogram("Layer 1 Weights", model.fc1.weight, epoch)
         writer.add_histogram("Layer 1 Bias", model.fc1.bias, epoch)
         writer.add_histogram("Layer 2 Weights", model.fc2.weight, epoch)
         writer.add_histogram("Layer 2 Bias", model.fc2.bias, epoch)
+        writer.add_histogram("Layer 3 Weights", model.fc3.weight, epoch)
+        writer.add_histogram("Layer 3 Bias", model.fc3.bias, epoch)
+        writer.add_histogram("Layer 4 Weights", model.fc4.weight, epoch)
+        writer.add_histogram("Layer 4 Bias", model.fc4.bias, epoch)
 
         writer.add_scalar("Training_Loss/Epochs", train_losses[epoch], epoch)
         
-        if validation and epoch%2 == 0 and epoch != 0:
+        if validation and epoch%20 == 0 and epoch != 0:
             valid_loss, accuracy = validation_check(model, valid_data_loader, loss_function)
             print(f"Validation Loss: {valid_loss}")
             valid_losses.append(valid_loss)
