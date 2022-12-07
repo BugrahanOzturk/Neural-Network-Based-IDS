@@ -44,11 +44,12 @@ class ShallowNeuralNetwork(nn.Module):
         self.tanh = nn.Tanh()
         #self.softmax = nn.Softmax(dim=0)
         self.sigmoid = nn.Sigmoid()
+        self.relu = nn.ReLU()
         self.my_device = torch.device('cpu') #Default to cpu
 
     def forward(self, x):
-        x = self.sigmoid(self.fc1(x))
-        x = self.sigmoid(self.fc2(x))
+        x = self.tanh(self.fc1(x))
+        x = self.relu(self.fc2(x))
         return x
 
 def train_one_epoch(model, train_data_loader, valid_data_loader, loss_function, optimizer, device, train_losses, valid_losses, accuracies):
@@ -121,9 +122,9 @@ def validation_check(model, valid_data_loader, loss_function):
             # calculate the loss
             loss = loss_function(output, targets)
             # update running validation loss
-            output = torch.round(output, decimals=1)
+            #output = torch.round(output)
             valid_loss += loss.item() * inputs.size(0)
-            batch_acc = metric(output, targets)
+            batch_acc = metric(torch.round(output), torch.round(targets))
     
     valid_loss = valid_loss/len(valid_data_loader.sampler)
     accuracy = 100*metric.compute()

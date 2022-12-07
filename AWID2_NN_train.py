@@ -26,10 +26,10 @@ if __name__ == "__main__":
 			column_names.append(line.strip())
 
 	training_data = FeatureDataset(train_file, column_names)
-	train_dataloader = torch.utils.data.DataLoader(training_data, batch_size = config.BATCH_SIZE, shuffle = True) #Batch Size is set to 1 for pattern learning
+	train_dataloader = torch.utils.data.DataLoader(training_data, batch_size = config.BATCH_SIZE, shuffle = True, num_workers=2) #Batch Size is set to 1 for pattern learning
 
 	valid_data = FeatureDataset(test_file, column_names)
-	valid_dataloader = torch.utils.data.DataLoader(valid_data, batch_size = config.BATCH_SIZE, shuffle = True)
+	valid_dataloader = torch.utils.data.DataLoader(valid_data, batch_size = config.BATCH_SIZE, shuffle = True, num_workers=2)
 
 	device = "cuda" if torch.cuda.is_available() else "cpu"
 	print(f"Using {device} device")
