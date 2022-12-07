@@ -37,10 +37,12 @@ class FeatureDataset(Dataset):
         return self.X_train[idx], self.y_train[idx]
 
 class ShallowNeuralNetwork(nn.Module):
-    def __init__(self, input_num, hidden_num, output_num):
+    def __init__(self, input_num, hidden_num1, hidden_num2, hidden_num3, output_num):
         super(ShallowNeuralNetwork, self).__init__()
-        self.fc1 = nn.Linear(input_num, hidden_num)
-        self.fc2 = nn.Linear(hidden_num, output_num)
+        self.fc1 = nn.Linear(input_num, hidden_num1)
+        self.fc2 = nn.Linear(hidden_num1, hidden_num2)
+        self.fc3 = nn.Linear(hidden_num2, hidden_num3)
+        self.fc4 = nn.Linear(hidden_num3, output_num)
         self.tanh = nn.Tanh()
         #self.softmax = nn.Softmax(dim=0)
         self.sigmoid = nn.Sigmoid()
@@ -48,8 +50,10 @@ class ShallowNeuralNetwork(nn.Module):
         self.my_device = torch.device('cpu') #Default to cpu
 
     def forward(self, x):
-        x = self.tanh(self.fc1(x))
-        x = self.relu(self.fc2(x))
+        x = self.sigmoid(self.fc1(x))
+        x = self.sigmoid(self.fc2(x))
+        x = self.sigmoid(self.fc3(x))
+        x = self.relu(self.fc4(x))
         return x
 
 def train_one_epoch(model, train_data_loader, valid_data_loader, loss_function, optimizer, device, train_losses, valid_losses, accuracies):
@@ -109,42 +113,73 @@ def train(model, train_data_loader, valid_data_loader, loss_function, optimizer,
     print("Training is done.")
     writer.close()
 
-def validation_check(model, valid_data_loader, loss_function):
-    valid_loss = 0.0
-    model.eval()
-    metric = Accuracy(task='multiclass', num_classes = 4)
-    with torch.no_grad():
-        for idx, (inputs, targets) in enumerate(valid_data_loader):
-            inputs = inputs.to(model.my_device, dtype=torch.float)
-            targets = targets.to(model.my_device, dtype=torch.float)
-            #forward pass: compute predicted outputs by passing inputs to the model
-            output = model(inputs)
-            # calculate the loss
-            loss = loss_function(output, targets)
-            # update running validation loss
-            #output = torch.round(output)
-            valid_loss += loss.item() * inputs.size(0)
-            batch_acc = metric(torch.round(output), torch.round(targets))
-    
-    valid_loss = valid_loss/len(valid_data_loader.sampler)
-    accuracy = 100*metric.compute()
-    metric.reset()
-    return valid_loss, accuracy
-
-def test_model(model, test_dataloader, loss_function):
+def validation_check(model, test_dataloader, loss_function):
     test_loss = 0.0
     model.eval()
     metric = Accuracy(task='multiclass', num_classes = 4)
     with torch.no_grad():
         for idx, (inputs, targets) in enumerate(test_dataloader):
+            inputs = inputs.to(model.my_device, dtype=torch.float)
+            targets = targets.to(model.my_device, dtype=torch.float)
+            
             output = model(inputs)
             loss = loss_function(output, targets)
-            output = torch.round(output, decimals=1)
             test_loss += loss.item()*inputs.size(0)
+            
+            for i in output:
+                if i.item() <= 0.15:
+                    i[0] = 0.0
+                elif i.item() > 0.15 and i.item() <= 0.45:
+                    i[0] = 0.3
+                elif i.item() > 0.45 and i.item() <= 0.85:
+                    i[0] = 0.7
+                elif i.item() > 0.85:
+                    i[0] = 1.0
+            
             batch_acc = metric(output, targets)
-            print(f"Accuracy on batch {idx}: {batch_acc}")
+            #print(f"Accuracy on batch {idx}: {batch_acc}")
     
     test_loss = test_loss/len(test_dataloader.sampler)
     accuracy = 100*metric.compute()
     metric.reset()
     return test_loss, accuracy
+
+def test_model(model, test_dataloader, loss_function):
+    test_loss = 0.0
+    model.eval()
+    y_true = []
+    y_pred = []
+    metric = Accuracy(task='multiclass', num_classes = 4)
+    with torch.no_grad():
+        for idx, (inputs, targets) in enumerate(test_dataloader):
+            inputs = inputs.to(model.my_device, dtype=torch.float)
+            targets = targets.to(model.my_device, dtype=torch.float)
+            
+            output = model(inputs)
+            loss = loss_function(output, targets)
+            test_loss += loss.item()*inputs.size(0)
+            
+            for i in output:
+                if i.item() <= 0.15:
+                    i[0] = 0.0
+                elif i.item() > 0.15 and i.item() <= 0.45:
+                    i[0] = 0.3
+                elif i.item() > 0.45 and i.item() <= 0.85:
+                    i[0] = 0.7
+                elif i.item() > 0.85:
+                    i[0] = 1.0
+            
+            for i in output:
+                y_pred.append(i.item())
+        
+            for i in targets:
+                y_true.append(i.item())
+            
+            batch_acc = metric(output, targets)
+            #print(f"Accuracy on batch {idx}: {batch_acc}")
+    
+    test_loss = test_loss/len(test_dataloader.sampler)
+    accuracy = 100*metric.compute()
+    metric.reset()
+    return test_loss, accuracy, y_pred, y_true
+

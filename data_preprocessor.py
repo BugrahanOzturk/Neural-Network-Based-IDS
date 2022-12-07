@@ -63,12 +63,11 @@ class DataSetProcessor():
                 #scaled_x = mms.transform(x)
 
                 # Normalize encoded classes
-                #mms.fit(pd.DataFrame(y, columns=y_columns))
-                #scaled_y = mms.transform(pd.DataFrame(y, columns=y_columns))
-                #scaled_y = np.round(scaled_y, 1)
+                mms.fit(pd.DataFrame(y, columns=y_columns))
+                scaled_y = mms.transform(pd.DataFrame(y, columns=y_columns))
+                scaled_y = np.round(scaled_y, 1)
         
-            #new_df = pd.concat([pd.DataFrame(scaled_x, columns=x_columns), pd.DataFrame(scaled_y, columns=y_columns)], axis=1)
-            new_df = pd.concat([pd.DataFrame(scaled_x, columns=x_columns), pd.DataFrame(y, columns=y_columns)], axis=1)
+            new_df = pd.concat([pd.DataFrame(scaled_x, columns=x_columns), pd.DataFrame(scaled_y, columns=y_columns)], axis=1)
             print(new_df.head())
 
             #Write the current columns to a new txt file
@@ -125,12 +124,11 @@ class DataSetProcessor():
                 scaled_x = mms.transform(x)
 
                 # Normalize encoded classes
-                #mms.fit(pd.DataFrame(y, columns=y_columns))
-                #scaled_y = mms.transform(pd.DataFrame(y, columns=y_columns))
-                #scaled_y = np.round(scaled_y, 1)
+                mms.fit(pd.DataFrame(y, columns=y_columns))
+                scaled_y = mms.transform(pd.DataFrame(y, columns=y_columns))
+                scaled_y = np.round(scaled_y, 1)
 
-            #new_df = pd.concat([pd.DataFrame(scaled_x, columns=x_columns), pd.DataFrame(scaled_y, columns=y_columns)], axis=1)
-            new_df = pd.concat([pd.DataFrame(scaled_x, columns=x_columns), pd.DataFrame(y, columns=y_columns)], axis=1)
+            new_df = pd.concat([pd.DataFrame(scaled_x, columns=x_columns), pd.DataFrame(scaled_y, columns=y_columns)], axis=1)
             print(new_df.head())
 
             file_path = os.path.join(dirname, "../PREPROCESSED_DATA/test_data")

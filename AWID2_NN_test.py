@@ -5,8 +5,11 @@
 ### IMPORTS ###
 import torch
 import pandas as pd
+import numpy as np
 import os
 import torch.nn as nn
+import seaborn as sns
+from matplotlib import pyplot as plt
 from pytorch_nn import ShallowNeuralNetwork
 from pytorch_nn import FeatureDataset
 from pytorch_nn import test_model
@@ -32,7 +35,7 @@ if __name__ == "__main__":
     print(f"Using {device} device")
 
     # Load the network
-    feed_forward_net = ShallowNeuralNetwork(config.N_INPUTS, config.N_HIDDEN, config.N_OUTPUTS).to(device)
+    feed_forward_net = ShallowNeuralNetwork(config.N_INPUTS, config.N_HIDDEN1, config.N_HIDDEN2, config.N_HIDDEN3, config.N_OUTPUTS).to(device)
     feed_forward_net.my_device = device
     pth_file = os.path.join(dirname, "feedforwardnet.pth")
     feed_forward_net.load_state_dict(torch.load(pth_file))
@@ -40,6 +43,22 @@ if __name__ == "__main__":
     loss_fn = nn.MSELoss()
 
     # test model
-    loss, accuracy = test_model(feed_forward_net, test_dataloader, loss_fn)
+    y_pred = []
+    y_true = []
+    loss, accuracy, y_pred, y_true = test_model(feed_forward_net, test_dataloader, loss_fn)
     print(f"Total Accuracy: {accuracy}")
     print(f"Test Loss: {loss}")
+
+    from sklearn.metrics import confusion_matrix
+    cf_matrix = confusion_matrix(y_true, y_pred)
+    class_names = ('flooding', 'impersonation', 'injection', 'normal')
+    dataframe = pd.DataFrame(cf_matrix, index=[i for i in class_names], columns=[i for i in class_names])
+
+    # Plot the Confusion Matrix
+    plt.figure(figsize=(12, 7))
+    sns.heatmap(dataframe, annot=True, fmt='g')
+    plt.title("Confusion Matrix")
+    plt.ylabel("True Class"),
+    plt.xlabel("Predicted Class")
+    plt.show()
+    
