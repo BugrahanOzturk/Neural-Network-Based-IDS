@@ -59,8 +59,7 @@ class DataSetProcessor():
                 sc = StandardScaler()
                 sc.fit(x)
                 scaled_x = sc.transform(x)
-                #mms.fit(x)
-                #scaled_x = mms.transform(x)
+                scaled_x = np.round(scaled_x, 3)
 
                 # Normalize encoded classes
                 mms.fit(pd.DataFrame(y, columns=y_columns))
@@ -119,9 +118,12 @@ class DataSetProcessor():
             # Normalization
             if normalization:
                 mms = MinMaxScaler()
+                
                 # Normalize features
-                mms.fit(x)
-                scaled_x = mms.transform(x)
+                sc = StandardScaler()
+                sc.fit(x)
+                scaled_x = sc.transform(x)
+                scaled_x = np.round(scaled_x, 3)
 
                 # Normalize encoded classes
                 mms.fit(pd.DataFrame(y, columns=y_columns))

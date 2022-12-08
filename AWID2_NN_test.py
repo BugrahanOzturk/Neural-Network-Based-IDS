@@ -28,14 +28,14 @@ if __name__ == "__main__":
             column_names.append(line.strip())
 
 
-    test_data = FeatureDataset(test_file, column_names)
+    test_data = FeatureDataset(test_file, column_names, sample_data = False)
     test_dataloader = torch.utils.data.DataLoader(test_data, batch_size = config.BATCH_SIZE, shuffle = False, num_workers=2)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using {device} device")
 
     # Load the network
-    feed_forward_net = ShallowNeuralNetwork(config.N_INPUTS, config.N_HIDDEN1, config.N_HIDDEN2, config.N_HIDDEN3, config.N_OUTPUTS).to(device)
+    feed_forward_net = ShallowNeuralNetwork(config.N_INPUTS, config.N_HIDDEN, config.N_OUTPUTS).to(device)
     feed_forward_net.my_device = device
     pth_file = os.path.join(dirname, "feedforwardnet.pth")
     feed_forward_net.load_state_dict(torch.load(pth_file))
@@ -52,6 +52,7 @@ if __name__ == "__main__":
     from sklearn.metrics import confusion_matrix
     cf_matrix = confusion_matrix(y_true, y_pred)
     class_names = ('flooding', 'impersonation', 'injection', 'normal')
+    
     dataframe = pd.DataFrame(cf_matrix, index=[i for i in class_names], columns=[i for i in class_names])
 
     # Plot the Confusion Matrix
