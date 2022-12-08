@@ -107,6 +107,10 @@ def train(model, train_data_loader, valid_data_loader, loss_function, optimizer,
         writer.add_histogram("Layer 1 Bias", model.fc1.bias, epoch)
         writer.add_histogram("Layer 2 Weights", model.fc2.weight, epoch)
         writer.add_histogram("Layer 2 Bias", model.fc2.bias, epoch)
+        writer.add_histogram("Layer 3 Weights", model.fc3.weight, epoch)
+        writer.add_histogram("Layer 3 Bias", model.fc3.bias, epoch)
+        writer.add_histogram("Layer 4 Weights", model.fc4.weight, epoch)
+        writer.add_histogram("Layer 4 Bias", model.fc4.bias, epoch)
 
         writer.add_scalar("Training_Loss/Epochs", train_losses[epoch], epoch)
         

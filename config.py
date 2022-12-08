@@ -2,9 +2,9 @@
 # date      : 27.11.2022
 # project   : Neural Networks Based Wireless Intrusion Detection System
 
-BATCH_SIZE 		= 500
+BATCH_SIZE 		= 128
 EPOCHS 			= 100
-LEARNING_RATE 	= 0.001
+LEARNING_RATE 	= 0.01
 N_INPUTS		= 22
 N_HIDDEN1		= 16
 N_HIDDEN2       = 8
