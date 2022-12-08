@@ -10,7 +10,6 @@ import torch.nn as nn
 from pytorch_nn import ShallowNeuralNetwork
 from pytorch_nn import FeatureDataset
 from pytorch_nn import train
-from pytorch_nn import visualise_dataloader
 import config
 
 if __name__ == "__main__":
