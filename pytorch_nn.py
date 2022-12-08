@@ -48,19 +48,23 @@ class FeatureDataset(Dataset):
         return self.X_train[idx], self.y_train[idx]
 
 class ShallowNeuralNetwork(nn.Module):
-    def __init__(self, input_num, hidden_num, output_num):
+    def __init__(self, input_num, hidden_num1, hidden_num2, hidden_num3, output_num):
         super(ShallowNeuralNetwork, self).__init__()
-        self.fc1 = nn.Linear(input_num, hidden_num)
-        self.fc2 = nn.Linear(hidden_num, output_num)
+        self.fc1 = nn.Linear(input_num, hidden_num1)
+        self.fc2 = nn.Linear(hidden_num1, hidden_num2)
+        self.fc3 = nn.Linear(hidden_num2, hidden_num3)
+        self.fc4 = nn.Linear(hidden_num3, output_num)
         self.tanh = nn.Tanh()
         #self.softmax = nn.Softmax(dim=0)
         #self.sigmoid = nn.Sigmoid()
-        #self.relu = nn.ReLU()
+        self.relu = nn.ReLU()
         self.my_device = torch.device('cpu') #Default to cpu
 
     def forward(self, x):
         x = self.tanh(self.fc1(x))
-        x = self.fc2(x)
+        x = self.tanh(self.fc2(x))
+        x = self.tanh(self.fc3(x))
+        x = self.relu(self.fc4(x))
         return x
 
 def train_one_epoch(model, train_data_loader, valid_data_loader, loss_function, optimizer, device, train_losses, valid_losses, accuracies):
@@ -95,6 +99,7 @@ def train(model, train_data_loader, valid_data_loader, loss_function, optimizer,
     valid_losses = []
     accuracies = []
     validation_cnt = 0
+    min_valid_loss = np.inf
     for epoch in range(epochs):
         print(f"Epoch {epoch}")
         train_one_epoch(model, train_data_loader, valid_data_loader, loss_function, optimizer, device, train_losses, valid_losses, accuracies)
@@ -105,13 +110,18 @@ def train(model, train_data_loader, valid_data_loader, loss_function, optimizer,
 
         writer.add_scalar("Training_Loss/Epochs", train_losses[epoch], epoch)
         
-        if validation and epoch%20 == 0 and epoch != 0:
+        if validation and epoch%10 == 0 and epoch != 0:
             valid_loss, accuracy = validation_check(model, valid_data_loader, loss_function)
             print(f"Validation Loss: {valid_loss}")
             valid_losses.append(valid_loss)
             print(f"Accuracy: %{accuracy}")
             accuracies.append(accuracy)
-
+            if min_valid_loss > valid_loss:
+                print(f'Validation Loss Decreased({min_valid_loss:.6f}--->{valid_loss:.6f}) \t Saving The Model')
+                min_valid_loss = valid_loss
+                # Saving State Dict
+                torch.save(model.state_dict(), 'feedforwardnet.pth')
+            
             writer.add_scalar("Validation_Loss/Tries", valid_losses[validation_cnt], validation_cnt)
             writer.add_scalar("Validation_Accuracy/Tries", accuracies[validation_cnt], validation_cnt)
             validation_cnt += 1
@@ -132,29 +142,9 @@ def validation_check(model, test_dataloader, loss_function):
             output = model(inputs)
             loss = loss_function(output, targets)
             test_loss += loss.item()*inputs.size(0)
-            
-            # Cast Floating points to labels (integers) based on threshold
-            for i in output:
-                value = round(i.item(), 2)
-                if value <= 0.15:
-                    i[0] = 1 #"flooding"
-                elif value > 0.15 and value <= 0.45:
-                    i[0] = 2 #"impersonation"
-                elif value > 0.45 and value <= 0.85:
-                    i[0] = 3 #"injection"
-                elif value > 0.85:
-                    i[0] = 4 #"normal"
-            
-            for i in targets:
-                value = round(i.item(), 1)
-                if value == 0.0:
-                    i[0] = 1 #"flooding"
-                elif value == 0.3:
-                    i[0] = 2 #"impersonation"
-                elif value == 0.7:
-                    i[0] = 3 #"injection"
-                elif value == 1.0:
-                    i[0] = 4 #"normal"
+
+            output = torch.round(output)
+            targets = torch.round(targets)
             
             batch_acc = metric(output, targets)
             #print(f"Accuracy on batch {idx}: {batch_acc}")
@@ -162,7 +152,7 @@ def validation_check(model, test_dataloader, loss_function):
     test_loss = test_loss/len(test_dataloader.sampler)
     accuracy = 100*metric.compute()
     metric.reset()
-    return test_loss, accuracy
+    return test_loss, accuracy    
 
 def test_model(model, test_dataloader, loss_function):
     test_loss = 0.0
@@ -178,128 +168,18 @@ def test_model(model, test_dataloader, loss_function):
             output = model(inputs)
             loss = loss_function(output, targets)
             test_loss += loss.item()*inputs.size(0)
-            
-            # Convert Floating Points to integers for confusion matrix
+
+            output = torch.round(output)
+            targets = torch.round(targets)
+
             for i in output:
-                value = round(i.item(), 2)
-                if value <= 0.15:
-                    i[0] = 1 #"flooding"
-                elif value > 0.15 and value <= 0.45:
-                    i[0] = 2 #"impersonation"
-                elif value > 0.45 and value <= 0.85:
-                    i[0] = 3 #"injection"
-                elif value > 0.85:
-                    i[0] = 4 #"normal"
                 y_pred.append(i.item())
-            
             for i in targets:
-                value = round(i.item(), 1)
-                if value == 0.0:
-                    i[0] = 1 #"flooding"
-                elif value == 0.3:
-                    i[0] = 2 #"impersonation"
-                elif value == 0.7:
-                    i[0] = 3 #"injection"
-                elif value == 1.0:
-                    i[0] = 4 #"normal"
                 y_true.append(i.item())
             
             batch_acc = metric(output, targets)
     
-    #print(set(y_pred))
-    #print(set(y_true))
     test_loss = test_loss/len(test_dataloader.sampler)
     accuracy = 100*metric.compute()
     metric.reset()
     return test_loss, accuracy, y_pred, y_true
-
-def visualise_dataloader(dl, id_to_label=None, with_outputs=True):
-    total_num_images = len(dl.dataset)
-    idxs_seen = []
-    class_0_batch_counts = []
-    class_1_batch_counts = []
-    class_2_batch_counts = []
-    class_3_batch_counts = []
-
-    for i, batch in enumerate(dl):
-
-        idxs = batch[1][:, 0].tolist()
-        classes = batch[1][:, 0]
-        class_ids, class_counts = classes.unique(return_counts=True)
-        class_ids = set(class_ids.tolist())
-        class_counts = class_counts.tolist()
-
-        idxs_seen.extend(idxs)
-
-        if len(class_ids) == 2:
-            class_0_batch_counts.append(class_counts[0])
-            class_1_batch_counts.append(class_counts[1])
-        elif len(class_ids) == 1 and 0 in class_ids:
-            class_0_batch_counts.append(class_counts[0])
-            class_1_batch_counts.append(0)
-        elif len(class_ids) == 1 and 1 in class_ids:
-            class_0_batch_counts.append(0)
-            class_1_batch_counts.append(class_counts[0])
-        elif len(class_ids) == 4:
-            class_0_batch_counts.append(class_counts[0])
-            class_1_batch_counts.append(class_counts[1])
-            class_2_batch_counts.append(class_counts[2])
-            class_3_batch_counts.append(class_counts[3])
-        #else:
-            #raise ValueError("More than two classes detected")
-
-    if with_outputs:
-        fig, ax = plt.subplots(1, figsize=(15, 15))
-
-        ind = np.arange(len(class_0_batch_counts))
-        width = 0.35
-
-        ax.bar(
-            ind,
-            class_0_batch_counts,
-            width,
-            label=(id_to_label[0] if id_to_label is not None else "0"),
-        )
-        ax.bar(
-            ind + width,
-            class_1_batch_counts,
-            width,
-            label=(id_to_label[1] if id_to_label is not None else "1"),
-        )
-        ax.bar(
-            ind + width,
-            class_2_batch_counts,
-            width,
-            label=(id_to_label[2] if id_to_label is not None else "2"),
-        )
-        ax.bar(
-            ind + width,
-            class_3_batch_counts,
-            width,
-            label=(id_to_label[3] if id_to_label is not None else "3"),
-        )
-        ax.set_xticks(ind, ind + 1)
-        ax.set_xlabel("Batch index", fontsize=12)
-        ax.set_ylabel("No. of images in batch", fontsize=12)
-        ax.set_aspect("equal")
-
-        plt.legend()
-        plt.show()
-
-        num_images_seen = len(idxs_seen)
-
-        print(
-            f'Avg Proportion of {(id_to_label[0] if id_to_label is not None else "Class 0")} per batch: {(np.array(class_0_batch_counts) / 10).mean()}'
-        )
-        print(
-            f'Avg Proportion of {(id_to_label[1] if id_to_label is not None else "Class 1")} per batch: {(np.array(class_1_batch_counts) / 10).mean()}'
-        )
-        print(
-            f'Avg Proportion of {(id_to_label[2] if id_to_label is not None else "Class 2")} per batch: {(np.array(class_2_batch_counts) / 10).mean()}'
-        )
-        print(
-            f'Avg Proportion of {(id_to_label[3] if id_to_label is not None else "Class 3")} per batch: {(np.array(class_3_batch_counts) / 10).mean()}'
-        )
-        print("=============")
-        print(f"Num. unique samples seen: {len(set(idxs_seen))}/{total_num_images}")
-    return class_0_batch_counts, class_1_batch_counts, class_2_batch_counts, class_3_batch_counts, idxs_seen

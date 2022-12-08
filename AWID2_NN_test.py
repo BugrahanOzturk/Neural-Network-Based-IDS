@@ -35,7 +35,7 @@ if __name__ == "__main__":
     print(f"Using {device} device")
 
     # Load the network
-    feed_forward_net = ShallowNeuralNetwork(config.N_INPUTS, config.N_HIDDEN, config.N_OUTPUTS).to(device)
+    feed_forward_net = ShallowNeuralNetwork(config.N_INPUTS, config.N_HIDDEN1, config.N_HIDDEN2, config.N_HIDDEN3, config.N_OUTPUTS).to(device)
     feed_forward_net.my_device = device
     pth_file = os.path.join(dirname, "feedforwardnet.pth")
     feed_forward_net.load_state_dict(torch.load(pth_file))

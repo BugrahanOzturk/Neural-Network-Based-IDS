@@ -62,9 +62,10 @@ class DataSetProcessor():
                 scaled_x = np.round(scaled_x, 3)
 
                 # Normalize encoded classes
-                mms.fit(pd.DataFrame(y, columns=y_columns))
-                scaled_y = mms.transform(pd.DataFrame(y, columns=y_columns))
-                scaled_y = np.round(scaled_y, 1)
+                #mms.fit(pd.DataFrame(y, columns=y_columns))
+                #scaled_y = mms.transform(pd.DataFrame(y, columns=y_columns))
+                #scaled_y = np.round(scaled_y, 1)
+                scaled_y = np.round(y)
         
             new_df = pd.concat([pd.DataFrame(scaled_x, columns=x_columns), pd.DataFrame(scaled_y, columns=y_columns)], axis=1)
             print(new_df.head())
@@ -126,9 +127,10 @@ class DataSetProcessor():
                 scaled_x = np.round(scaled_x, 3)
 
                 # Normalize encoded classes
-                mms.fit(pd.DataFrame(y, columns=y_columns))
-                scaled_y = mms.transform(pd.DataFrame(y, columns=y_columns))
-                scaled_y = np.round(scaled_y, 1)
+                #mms.fit(pd.DataFrame(y, columns=y_columns))
+                #scaled_y = mms.transform(pd.DataFrame(y, columns=y_columns))
+                #scaled_y = np.round(scaled_y, 1)
+                scaled_y = np.round(y)
 
             new_df = pd.concat([pd.DataFrame(scaled_x, columns=x_columns), pd.DataFrame(scaled_y, columns=y_columns)], axis=1)
             print(new_df.head())
