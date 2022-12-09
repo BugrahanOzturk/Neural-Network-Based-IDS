@@ -54,11 +54,19 @@ class ShallowNeuralNetwork(nn.Module):
         self.fc2 = nn.Linear(hidden_num1, hidden_num2)
         self.fc3 = nn.Linear(hidden_num2, hidden_num3)
         self.fc4 = nn.Linear(hidden_num3, output_num)
+        self.apply(self._init_weights)
         self.tanh = nn.Tanh()
         #self.softmax = nn.Softmax(dim=0)
         #self.sigmoid = nn.Sigmoid()
         self.relu = nn.ReLU()
         self.my_device = torch.device('cpu') #Default to cpu
+    
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            #module.weight.data.normal_(mean=0.0, std=1.0)
+            torch.nn.init.xavier_uniform_(module.weight)
+            if module.bias is not None:
+                module.bias.data.zero_()
 
     def forward(self, x):
         x = self.tanh(self.fc1(x))
@@ -114,7 +122,7 @@ def train(model, train_data_loader, valid_data_loader, loss_function, optimizer,
 
         writer.add_scalar("Training_Loss/Epochs", train_losses[epoch], epoch)
         
-        if validation and epoch%10 == 0 and epoch != 0:
+        if validation and epoch%2 == 0 and epoch != 0:
             valid_loss, accuracy = validation_check(model, valid_data_loader, loss_function)
             print(f"Validation Loss: {valid_loss}")
             valid_losses.append(valid_loss)

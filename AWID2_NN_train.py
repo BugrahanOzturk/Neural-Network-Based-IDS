@@ -40,8 +40,8 @@ if __name__ == "__main__":
 
 	loss_fn = nn.MSELoss()
 	#loss_fn = nn.BCELoss()
-	#optimizer = torch.optim.SGD(feed_forward_net.parameters(), lr = config.LEARNING_RATE)
-	optimizer = torch.optim.Adam(feed_forward_net.parameters(), lr = config.LEARNING_RATE)
+	optimizer = torch.optim.SGD(feed_forward_net.parameters(), lr = config.LEARNING_RATE)
+	#optimizer = torch.optim.Adam(feed_forward_net.parameters(), lr = config.LEARNING_RATE)
 
 	# train model
 	train(feed_forward_net, train_dataloader, valid_dataloader, loss_fn, optimizer, device, config.EPOCHS, validation=True)
