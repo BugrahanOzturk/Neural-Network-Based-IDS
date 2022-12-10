@@ -26,10 +26,10 @@ if __name__ == "__main__":
 			column_names.append(line.strip())
 
 	training_data = FeatureDataset(train_file, column_names, sample_data = True)
-	train_dataloader = torch.utils.data.DataLoader(training_data, sampler=training_data.sampler, batch_size = config.BATCH_SIZE, shuffle = False, num_workers=2) #Batch Size is set to 1 for pattern learning
-	
+	train_dataloader = torch.utils.data.DataLoader(training_data, sampler=training_data.sampler, batch_size = config.BATCH_SIZE_TRAIN, shuffle = False, num_workers=2) #Batch Size is set to 1 for pattern learning
+
 	valid_data = FeatureDataset(test_file, column_names, sample_data = False)
-	valid_dataloader = torch.utils.data.DataLoader(valid_data, batch_size = config.BATCH_SIZE, shuffle = False, num_workers=2)
+	valid_dataloader = torch.utils.data.DataLoader(valid_data, batch_size = config.BATCH_SIZE_TEST, shuffle = False, num_workers=2)
 
 	device = "cuda" if torch.cuda.is_available() else "cpu"
 	print(f"Using {device} device")
@@ -40,8 +40,8 @@ if __name__ == "__main__":
 
 	loss_fn = nn.MSELoss()
 	#loss_fn = nn.BCELoss()
-	optimizer = torch.optim.SGD(feed_forward_net.parameters(), lr = config.LEARNING_RATE)
-	#optimizer = torch.optim.Adam(feed_forward_net.parameters(), lr = config.LEARNING_RATE)
+	#optimizer = torch.optim.SGD(feed_forward_net.parameters(), lr = config.LEARNING_RATE)
+	optimizer = torch.optim.Adam(feed_forward_net.parameters(), lr = config.LEARNING_RATE)
 
 	# train model
 	train(feed_forward_net, train_dataloader, valid_dataloader, loss_fn, optimizer, device, config.EPOCHS, validation=True)

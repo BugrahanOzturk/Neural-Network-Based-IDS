@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
 
     test_data = FeatureDataset(test_file, column_names, sample_data = False)
-    test_dataloader = torch.utils.data.DataLoader(test_data, batch_size = config.BATCH_SIZE, shuffle = False, num_workers=2)
+    test_dataloader = torch.utils.data.DataLoader(test_data, batch_size = config.BATCH_SIZE_TEST, shuffle = False, num_workers=2)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using {device} device")

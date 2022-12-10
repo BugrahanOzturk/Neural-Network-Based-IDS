@@ -56,8 +56,8 @@ class ShallowNeuralNetwork(nn.Module):
         self.fc4 = nn.Linear(hidden_num3, output_num)
         self.apply(self._init_weights)
         self.tanh = nn.Tanh()
-        #self.softmax = nn.Softmax(dim=0)
-        #self.sigmoid = nn.Sigmoid()
+        self.softmax = nn.Softmax(dim=0)
+        self.sigmoid = nn.Sigmoid()
         self.relu = nn.ReLU()
         self.my_device = torch.device('cpu') #Default to cpu
     
@@ -72,7 +72,7 @@ class ShallowNeuralNetwork(nn.Module):
         x = self.tanh(self.fc1(x))
         x = self.tanh(self.fc2(x))
         x = self.tanh(self.fc3(x))
-        x = self.relu(self.fc4(x))
+        x = self.sigmoid(self.fc4(x))
         return x
 
 def train_one_epoch(model, train_data_loader, valid_data_loader, loss_function, optimizer, device, train_losses, valid_losses, accuracies):
@@ -155,8 +155,18 @@ def validation_check(model, test_dataloader, loss_function):
             loss = loss_function(output, targets)
             test_loss += loss.item()*inputs.size(0)
 
-            output = torch.round(output)
-            targets = torch.round(targets)
+            output = torch.round(output, decimals=3)
+            
+            # Map the output tensor
+            for i in output:
+                if i.item() >= 0 and i.item() < 0.25:
+                    i[0] = 0.125
+                elif i.item() >= 0.25 and i.item() < 0.50:
+                    i[0] = 0.375
+                elif i.item() >= 0.50 and i.item() < 0.75:
+                    i[0] = 0.625
+                elif i.item() >= 0.75 and i.item() <= 1.0:
+                    i[0] = 0.875
             
             batch_acc = metric(output, targets)
             #print(f"Accuracy on batch {idx}: {batch_acc}")
@@ -181,11 +191,20 @@ def test_model(model, test_dataloader, loss_function):
             loss = loss_function(output, targets)
             test_loss += loss.item()*inputs.size(0)
 
-            output = torch.round(output)
-            targets = torch.round(targets)
-
+            output = torch.round(output, decimals=3)
+            
+            # Map the output tensor
             for i in output:
+                if i.item() >= 0 and i.item() < 0.25:
+                    i[0] = 0.125
+                elif i.item() >= 0.25 and i.item() < 0.50:
+                    i[0] = 0.375
+                elif i.item() >= 0.50 and i.item() < 0.75:
+                    i[0] = 0.625
+                elif i.item() >= 0.75 and i.item() <= 1.0:
+                    i[0] = 0.875
                 y_pred.append(i.item())
+
             for i in targets:
                 y_true.append(i.item())
             

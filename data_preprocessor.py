@@ -36,7 +36,7 @@ class DataSetProcessor():
             print(df.select_dtypes(['number']).head())
             print(df['class'].head())
 
-            x, y = df.select_dtypes(['number']), df['class']
+            x, y = df.select_dtypes(['number']), df['class'].to_numpy()
 
             # Remove columns with no variation (zero values or only one unique value in it)
             self.constant_col = x.columns[x.mean() == x.max()]
@@ -47,11 +47,6 @@ class DataSetProcessor():
             x_columns = x.columns
             y_columns = ['class']
 
-            # Class Encoding
-            encoder = LabelEncoder()
-            y = encoder.fit_transform(y)
-            print(encoder.classes_)
-
             # Normalization
             if normalization:
                 mms = MinMaxScaler()
@@ -61,13 +56,20 @@ class DataSetProcessor():
                 scaled_x = sc.transform(x)
                 scaled_x = np.round(scaled_x, 3)
 
-                # Normalize encoded classes
-                #mms.fit(pd.DataFrame(y, columns=y_columns))
-                #scaled_y = mms.transform(pd.DataFrame(y, columns=y_columns))
-                #scaled_y = np.round(scaled_y, 1)
-                scaled_y = np.round(y)
+            # Map the labels to floating point numbers
+            for idx, label in enumerate(y):
+                if label == "flooding":
+                    y[idx] = 0.125
+                elif label == "impersonation":
+                    y[idx] = 0.375
+                elif label == "injection":
+                    y[idx] = 0.625
+                elif label == "normal":
+                    y[idx] = 0.875
+                else:
+                    raise ValueError("Unknown label inside dataset classes!")
         
-            new_df = pd.concat([pd.DataFrame(scaled_x, columns=x_columns), pd.DataFrame(scaled_y, columns=y_columns)], axis=1)
+            new_df = pd.concat([pd.DataFrame(scaled_x, columns=x_columns), pd.DataFrame(y, columns=y_columns)], axis=1)
             print(new_df.head())
 
             #Write the current columns to a new txt file
@@ -105,16 +107,11 @@ class DataSetProcessor():
             for col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='ignore')
 
-            x, y = df.select_dtypes(['number']), df['class']
+            x, y = df.select_dtypes(['number']), df['class'].to_numpy()
 
             #Note the column names
             x_columns = x.columns
             y_columns = ['class']
-
-            # Class Encoding
-            encoder = LabelEncoder()
-            y = encoder.fit_transform(y)
-            print(encoder.classes_)
 
             # Normalization
             if normalization:
@@ -126,13 +123,20 @@ class DataSetProcessor():
                 scaled_x = sc.transform(x)
                 scaled_x = np.round(scaled_x, 3)
 
-                # Normalize encoded classes
-                #mms.fit(pd.DataFrame(y, columns=y_columns))
-                #scaled_y = mms.transform(pd.DataFrame(y, columns=y_columns))
-                #scaled_y = np.round(scaled_y, 1)
-                scaled_y = np.round(y)
+            # Map the labels to floating point numbers
+            for idx, label in enumerate(y):
+                if label == "flooding":
+                    y[idx] = 0.125
+                elif label == "impersonation":
+                    y[idx] = 0.375
+                elif label == "injection":
+                    y[idx] = 0.625
+                elif label == "normal":
+                    y[idx] = 0.875
+                else:
+                    raise ValueError("Unknown label inside dataset classes!")
 
-            new_df = pd.concat([pd.DataFrame(scaled_x, columns=x_columns), pd.DataFrame(scaled_y, columns=y_columns)], axis=1)
+            new_df = pd.concat([pd.DataFrame(scaled_x, columns=x_columns), pd.DataFrame(y, columns=y_columns)], axis=1)
             print(new_df.head())
 
             file_path = os.path.join(dirname, "../PREPROCESSED_DATA/test_data")
