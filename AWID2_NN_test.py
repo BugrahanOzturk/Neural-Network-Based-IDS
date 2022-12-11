@@ -13,6 +13,7 @@ from matplotlib import pyplot as plt
 from pytorch_nn import ShallowNeuralNetwork
 from pytorch_nn import FeatureDataset
 from pytorch_nn import test_model
+from pytorch_nn import plot_confusion_mtrx
 import config
 
 if __name__ == "__main__":
@@ -29,7 +30,7 @@ if __name__ == "__main__":
 
 
     test_data = FeatureDataset(test_file, column_names, sample_data = False)
-    test_dataloader = torch.utils.data.DataLoader(test_data, batch_size = config.BATCH_SIZE_TEST, shuffle = False, num_workers=2)
+    test_dataloader = torch.utils.data.DataLoader(test_data, batch_size = config.BATCH_SIZE_TEST, shuffle = False, num_workers=config.NUM_WORKERS)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using {device} device")
@@ -49,11 +50,7 @@ if __name__ == "__main__":
     print(f"Total Accuracy: {accuracy}")
     print(f"Test Loss: {loss}")
 
-    from sklearn.metrics import confusion_matrix
-    cf_matrix = confusion_matrix(y_true, y_pred)
-    class_names = ('flooding', 'impersonation', 'injection', 'normal')
-    
-    dataframe = pd.DataFrame(cf_matrix, index=[i for i in class_names], columns=[i for i in class_names])
+    dataframe = plot_confusion_mtrx(y_true, y_pred)
 
     # Plot the Confusion Matrix
     plt.figure(figsize=(12, 7))

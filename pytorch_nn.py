@@ -7,6 +7,8 @@ import csv
 import torch
 import pandas as pd
 import numpy as np
+import os
+import config
 import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,7 +17,14 @@ from torch.utils.data import Dataset
 from torch.utils.tensorboard import SummaryWriter
 from torchmetrics import Accuracy
 from torch.utils.data import WeightedRandomSampler
+from sklearn.metrics import confusion_matrix
 
+import ray
+from ray import tune
+from ray.air import session
+from ray.air.checkpoint import Checkpoint
+
+#*******************************************************************#
 class FeatureDataset(Dataset):
     def __init__(self, data_path, col_names, sample_data=False):
         # read csv file
@@ -46,7 +55,9 @@ class FeatureDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.X_train[idx], self.y_train[idx]
+#*******************************************************************#
 
+#*******************************************************************#
 class ShallowNeuralNetwork(nn.Module):
     def __init__(self, input_num, hidden_num1, hidden_num2, hidden_num3, output_num):
         super(ShallowNeuralNetwork, self).__init__()
@@ -74,8 +85,13 @@ class ShallowNeuralNetwork(nn.Module):
         x = self.tanh(self.fc3(x))
         x = self.sigmoid(self.fc4(x))
         return x
+#*******************************************************************#
 
-def train_one_epoch(model, train_data_loader, valid_data_loader, loss_function, optimizer, device, train_losses, valid_losses, accuracies):
+#*******************************************************************#
+def train_one_epoch(model, train_data_loader, loss_function, optimizer, train_losses):
+    '''
+        This function is used to train the given model for 1 epoch.
+    '''
     train_loss = 0.0
     model.train()
     for idx, (inputs, targets) in enumerate(train_data_loader):
@@ -100,9 +116,16 @@ def train_one_epoch(model, train_data_loader, valid_data_loader, loss_function, 
     train_loss = train_loss/len(train_data_loader.sampler)
     print(f"Training Loss: {train_loss}")
     train_losses.append(train_loss)
+#*******************************************************************#
 
-def train(model, train_data_loader, valid_data_loader, loss_function, optimizer, device, epochs, validation):
-    writer = SummaryWriter("runs") # Visiualize Training Data
+#*******************************************************************#
+def train(model, train_data_loader, valid_data_loader, loss_function, optimizer, epochs, val_per_epoch, validation=True, tensorboard_report=True):
+    '''
+        This function is used to train a given neural network model.
+    '''
+    if tensorboard_report:
+        writer = SummaryWriter("runs") # Visiualize Training Data
+    
     train_losses = []
     valid_losses = []
     accuracies = []
@@ -110,19 +133,21 @@ def train(model, train_data_loader, valid_data_loader, loss_function, optimizer,
     min_valid_loss = np.inf
     for epoch in range(epochs):
         print(f"Epoch {epoch}")
-        train_one_epoch(model, train_data_loader, valid_data_loader, loss_function, optimizer, device, train_losses, valid_losses, accuracies)
-        writer.add_histogram("Layer 1 Weights", model.fc1.weight, epoch)
-        writer.add_histogram("Layer 1 Bias", model.fc1.bias, epoch)
-        writer.add_histogram("Layer 2 Weights", model.fc2.weight, epoch)
-        writer.add_histogram("Layer 2 Bias", model.fc2.bias, epoch)
-        writer.add_histogram("Layer 3 Weights", model.fc3.weight, epoch)
-        writer.add_histogram("Layer 3 Bias", model.fc3.bias, epoch)
-        writer.add_histogram("Layer 4 Weights", model.fc4.weight, epoch)
-        writer.add_histogram("Layer 4 Bias", model.fc4.bias, epoch)
-
-        writer.add_scalar("Training_Loss/Epochs", train_losses[epoch], epoch)
+        train_one_epoch(model, train_data_loader, loss_function, optimizer, train_losses)
         
-        if validation and epoch%2 == 0 and epoch != 0:
+        if tensorboard_report:
+            writer.add_histogram("Layer 1 Weights", model.fc1.weight, epoch)
+            writer.add_histogram("Layer 1 Bias", model.fc1.bias, epoch)
+            writer.add_histogram("Layer 2 Weights", model.fc2.weight, epoch)
+            writer.add_histogram("Layer 2 Bias", model.fc2.bias, epoch)
+            writer.add_histogram("Layer 3 Weights", model.fc3.weight, epoch)
+            writer.add_histogram("Layer 3 Bias", model.fc3.bias, epoch)
+            writer.add_histogram("Layer 4 Weights", model.fc4.weight, epoch)
+            writer.add_histogram("Layer 4 Bias", model.fc4.bias, epoch)
+
+            writer.add_scalar("Training_Loss/Epochs", train_losses[epoch], epoch)
+        
+        if validation and epoch%val_per_epoch == 0 and epoch != 0:
             valid_loss, accuracy = validation_check(model, valid_data_loader, loss_function)
             print(f"Validation Loss: {valid_loss}")
             valid_losses.append(valid_loss)
@@ -134,15 +159,23 @@ def train(model, train_data_loader, valid_data_loader, loss_function, optimizer,
                 # Saving State Dict
                 torch.save(model.state_dict(), 'feedforwardnet.pth')
             
-            writer.add_scalar("Validation_Loss/Tries", valid_losses[validation_cnt], validation_cnt)
-            writer.add_scalar("Validation_Accuracy/Tries", accuracies[validation_cnt], validation_cnt)
+            if tensorboard_report:
+                writer.add_scalar("Validation_Loss/Tries", valid_losses[validation_cnt], validation_cnt)
+                writer.add_scalar("Validation_Accuracy/Tries", accuracies[validation_cnt], validation_cnt)
+            
             validation_cnt += 1
         print("---------------------")    
 
     print("Training is done.")
     writer.close()
+#*******************************************************************#
 
+#*******************************************************************#
 def validation_check(model, test_dataloader, loss_function):
+    '''
+        This function is used for conducting validation checks
+        during the training phase.
+    '''
     test_loss = 0.0
     model.eval()
     metric = Accuracy(task='multiclass', num_classes = 4)
@@ -175,8 +208,14 @@ def validation_check(model, test_dataloader, loss_function):
     accuracy = 100*metric.compute()
     metric.reset()
     return test_loss, accuracy    
+#*******************************************************************#
 
+#*******************************************************************#
 def test_model(model, test_dataloader, loss_function):
+    '''
+        This function tests a given model in terms of loss and
+        accuracy.
+    '''
     test_loss = 0.0
     model.eval()
     y_true = []
@@ -214,3 +253,86 @@ def test_model(model, test_dataloader, loss_function):
     accuracy = 100*metric.compute()
     metric.reset()
     return test_loss, accuracy, y_pred, y_true
+#*******************************************************************#
+
+#*******************************************************************#
+def hyperparameter_optimizer(my_config, train_data_loader, test_dataloader):
+    '''
+        This function is used to tune the hyperparameters (hidden layer neurons, learning rate)
+        of the given neural network model
+    '''
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Using {device} device")
+
+    # Construct the network
+    model = ShallowNeuralNetwork(config.N_INPUTS, my_config['hidden1'], my_config['hidden2'], my_config['hidden3'], config.N_OUTPUTS).to(device)
+    #model.my_device = device
+
+    loss_fn = nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=my_config['lr'])
+
+    # Restore checkpoint
+    loaded_checkpoint = session.get_checkpoint()
+    if loaded_checkpoint:
+        with loaded_checkpoint.as_directory() as loaded_checkpoint_dir:
+            model_state, optimizer_state = torch.load(os.path.join(loaded_checkpoint_dir, "checkpoint.pt"))
+            model.load_state_dict(model_state)
+            optimizer.load_state_dict(optimizer_state)
+
+    train_losses = []
+    y_pred = []
+    y_true = []
+	# train model
+    for epoch in range(my_config['epochs']):
+        #print(f"Epoch {epoch}")
+        train_one_epoch(model, ray.get(train_data_loader), loss_fn, optimizer, train_losses)
+    
+        test_loss, accuracy, y_pred, y_true = test_model(model, ray.get(test_dataloader), loss_fn)    
+
+        os.makedirs("my_model", exist_ok=True)
+        torch.save(
+            (model.state_dict(), optimizer.state_dict()), "my_model/checkpoint.pt"
+        )
+        checkpoint = Checkpoint.from_directory("my_model")
+        session.report({"loss": test_loss, "accuracy": accuracy}, checkpoint=checkpoint)
+
+        #print(f"Test Loss: {test_loss}")
+        #print(f"Accuracy: %{accuracy}")
+        #print("---------------------")  
+    
+    print("Finished training")
+
+#*******************************************************************#
+
+#*******************************************************************#
+def plot_confusion_mtrx(y_true, y_pred):
+    '''
+        This function returns the confusion matrix dataframe for
+        the given targets and predictions lists.
+    '''
+    # Map Every Floating point to a integer
+    for idx, value in enumerate(y_pred):
+        if value == 0.125:
+            y_pred[idx] = 0
+        elif value == 0.375:
+            y_pred[idx] = 1
+        elif value == 0.625:
+            y_pred[idx] = 2
+        elif value == 0.875:
+            y_pred[idx] = 3
+    
+    for idx, value in enumerate(y_true):
+        if value == 0.125:
+            y_true[idx] = 0
+        elif value == 0.375:
+            y_true[idx] = 1
+        elif value == 0.625:
+            y_true[idx] = 2
+        elif value == 0.875:
+            y_true[idx] = 3
+
+    cf_matrix = confusion_matrix(y_true, y_pred)
+    class_names = ('flooding', 'impersonation', 'injection', 'normal')
+    
+    return pd.DataFrame(cf_matrix, index=[i for i in class_names], columns=[i for i in class_names])
+#*******************************************************************#
