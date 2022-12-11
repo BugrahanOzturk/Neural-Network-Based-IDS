@@ -16,8 +16,8 @@ from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 
-num_samples = 5
-max_num_epochs = 10
+num_samples = 20
+max_num_epochs = 20
 
 if __name__ == "__main__":
 
@@ -43,12 +43,20 @@ if __name__ == "__main__":
     train_id = ray.put(train_dataloader)
     test_id = ray.put(test_dataloader)
 
+    #search_space = {
+    #    "epochs": 15,
+    #    "lr": tune.loguniform(1e-4, 1e-1),
+    #    "hidden1": tune.sample_from(lambda _: 2**np.random.randint(2, 9)),
+    #    "hidden2": tune.sample_from(lambda _: 2**np.random.randint(2, 9)),
+    #    "hidden3": tune.sample_from(lambda _: 2**np.random.randint(2, 9)),
+    #}
+
     search_space = {
-        "epochs": 15,
-        "lr": tune.loguniform(1e-4, 1e-1),
-        "hidden1": tune.sample_from(lambda _: 2**np.random.randint(2, 9)),
-        "hidden2": tune.sample_from(lambda _: 2**np.random.randint(2, 9)),
-        "hidden3": tune.sample_from(lambda _: 2**np.random.randint(2, 9)),
+        "epochs": 30,
+        "lr": 0.01,
+        "hidden1": tune.sample_from(lambda _: 2**np.random.randint(2, 5)),
+        "hidden2": tune.sample_from(lambda _: 2**np.random.randint(2, 5)),
+        "hidden3": tune.sample_from(lambda _: 2**np.random.randint(2, 5)),
     }
 
     scheduler = ASHAScheduler(
