@@ -9,15 +9,20 @@ import torch
 import config
 from pytorch_nn import hyperparameter_optimizer
 from pytorch_nn import FeatureDataset
+from pytorch_nn import ShallowNeuralNetwork
+import torch.nn as nn
+from pytorch_nn import test_model
+from pytorch_nn import plot_confusion_mtrx
 
 import ray
 from functools import partial
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
+from ray import air
 
-num_samples = 20
-max_num_epochs = 20
+num_samples = 1
+max_num_epochs = 1
 
 if __name__ == "__main__":
 
@@ -52,7 +57,7 @@ if __name__ == "__main__":
     #}
 
     search_space = {
-        "epochs": 30,
+        "epochs": 1,
         "lr": 0.01,
         "hidden1": tune.sample_from(lambda _: 2**np.random.randint(2, 5)),
         "hidden2": tune.sample_from(lambda _: 2**np.random.randint(2, 5)),
@@ -68,7 +73,7 @@ if __name__ == "__main__":
     tuner = tune.Tuner(
         tune.with_resources(
             tune.with_parameters(partial(hyperparameter_optimizer, train_data_loader=train_id, test_dataloader=test_id)),
-            resources={"cpu":4, "gpu":0}
+            resources={"cpu":2, "gpu":0}
         ),
         tune_config=tune.TuneConfig(
             metric="loss",
@@ -77,9 +82,17 @@ if __name__ == "__main__":
             num_samples=num_samples
         ),
         param_space=search_space,
+        run_config=air.RunConfig(
+            name="test_experiment",
+            local_dir="./tune_results"
+        ),
     )
 
     results = tuner.fit()
+
+    logdir = results.get_best_result("loss", mode="min").log_dir
+    print(results.get_best_result("loss", mode="min").checkpoint)
+    state_dict = torch.load(os.path.join(logdir, "checkpoint.pt"))
 
     best_result = results.get_best_result("loss", "min")
 
@@ -99,9 +112,7 @@ if __name__ == "__main__":
     feed_forward_net = ShallowNeuralNetwork(config.N_INPUTS, best_result.config['hidden1'], best_result.config['hidden2'], best_result.config['hidden3'], config.N_OUTPUTS).to(device)
     feed_forward_net.my_device = device
 
-    checkpoint_path = os.path.join(best_result.checkpoint.to_directory(), "checkpoint.pt")
-    model_state, optimizer_state = torch.load(checkpoint_path)
-    feed_forward_net.load_state_dict(model_state)
+    feed_forward_net.load_state_dict(state_dict)
 
     loss_fn = nn.MSELoss()
 
@@ -111,6 +122,8 @@ if __name__ == "__main__":
     loss, accuracy, y_pred, y_true = test_model(feed_forward_net, test_dataloader, loss_fn)
     print(f"Total Accuracy: {accuracy}")
     print(f"Test Loss: {loss}")
+
+    torch.save(feed_forward_net.state_dict(), 'feedforwardnet.pth')
 
     dataframe = plot_confusion_mtrx(y_true, y_pred)
 

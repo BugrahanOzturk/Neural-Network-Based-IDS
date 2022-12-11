@@ -290,7 +290,7 @@ def hyperparameter_optimizer(my_config, train_data_loader, test_dataloader):
         test_loss, accuracy, y_pred, y_true = test_model(model, ray.get(test_dataloader), loss_fn)    
 
         dirname = os.path.dirname(__file__)
-        path = os.path.join(dirname, "my_model")
+        path = os.path.join(dirname, "checkpoint")
         os.makedirs(path, exist_ok=True)
         torch.save(
             (model.state_dict(), optimizer.state_dict()), os.path.join(path, "checkpoint.pt")
