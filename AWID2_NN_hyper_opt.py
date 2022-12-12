@@ -92,7 +92,7 @@ if __name__ == "__main__":
 
     results = tuner.fit()
 
-    best_result = results.get_best_result("loss", "min")
+    best_result = results.get_best_result("loss", "min", scope="all")
     path = os.path.join(best_result.checkpoint._local_path, "checkpoint.pt")
     best_checkpoint = torch.load(path)
     model, optimizer = best_checkpoint
