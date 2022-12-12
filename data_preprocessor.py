@@ -155,5 +155,5 @@ if __name__ == "__main__":
         for line in file:
             column_names.append(line.strip())
     
-    #training_data = DataSetProcessor(train_file, column_names, normalization=True, train_data=True)
-    test_data = DataSetProcessor(test_file, column_names, normalization=True, test_data=True)
+    training_data = DataSetProcessor(train_file, column_names, normalization=True, train_data=True)
+    #test_data = DataSetProcessor(test_file, column_names, normalization=True, test_data=True)

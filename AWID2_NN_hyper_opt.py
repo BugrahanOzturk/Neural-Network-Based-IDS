@@ -13,6 +13,8 @@ from pytorch_nn import ShallowNeuralNetwork
 import torch.nn as nn
 from pytorch_nn import test_model
 from pytorch_nn import plot_confusion_mtrx
+from matplotlib import pyplot as plt
+import seaborn as sns
 
 import ray
 from functools import partial
@@ -21,8 +23,8 @@ from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 from ray import air
 
-num_samples = 1
-max_num_epochs = 1
+num_samples = 150
+max_num_epochs = 100
 
 if __name__ == "__main__":
 
@@ -48,21 +50,21 @@ if __name__ == "__main__":
     train_id = ray.put(train_dataloader)
     test_id = ray.put(test_dataloader)
 
-    #search_space = {
-    #    "epochs": 15,
-    #    "lr": tune.loguniform(1e-4, 1e-1),
-    #    "hidden1": tune.sample_from(lambda _: 2**np.random.randint(2, 9)),
-    #    "hidden2": tune.sample_from(lambda _: 2**np.random.randint(2, 9)),
-    #    "hidden3": tune.sample_from(lambda _: 2**np.random.randint(2, 9)),
-    #}
-
     search_space = {
-        "epochs": 1,
-        "lr": 0.01,
-        "hidden1": tune.sample_from(lambda _: 2**np.random.randint(2, 5)),
-        "hidden2": tune.sample_from(lambda _: 2**np.random.randint(2, 5)),
-        "hidden3": tune.sample_from(lambda _: 2**np.random.randint(2, 5)),
+        "epochs": 100,
+        "lr": tune.loguniform(1e-4, 1e-1),
+        "hidden1": tune.randint(16, 22),
+        "hidden2": tune.randint(2, 22),
+        "hidden3": tune.randint(2, 12),
     }
+
+    #search_space = {
+    #    "epochs": 100,
+    #    "lr": 0.01,
+    #    "hidden1": tune.sample_from(lambda _: 2**np.random.randint(2, 6)),
+    #    "hidden2": tune.sample_from(lambda _: 2**np.random.randint(2, 6)),
+    #    "hidden3": tune.sample_from(lambda _: 2**np.random.randint(2, 6)),
+    #}
 
     scheduler = ASHAScheduler(
         max_t=max_num_epochs,
@@ -73,7 +75,7 @@ if __name__ == "__main__":
     tuner = tune.Tuner(
         tune.with_resources(
             tune.with_parameters(partial(hyperparameter_optimizer, train_data_loader=train_id, test_dataloader=test_id)),
-            resources={"cpu":2, "gpu":0}
+            resources={"cpu":6, "gpu":0}
         ),
         tune_config=tune.TuneConfig(
             metric="loss",
@@ -90,11 +92,10 @@ if __name__ == "__main__":
 
     results = tuner.fit()
 
-    logdir = results.get_best_result("loss", mode="min").log_dir
-    print(results.get_best_result("loss", mode="min").checkpoint)
-    state_dict = torch.load(os.path.join(logdir, "checkpoint.pt"))
-
     best_result = results.get_best_result("loss", "min")
+    path = os.path.join(best_result.checkpoint._local_path, "checkpoint.pt")
+    best_checkpoint = torch.load(path)
+    model, optimizer = best_checkpoint
 
     print("Best trial config: {}".format(best_result.config))
     print("Best trial final test loss: {}".format(
@@ -112,7 +113,7 @@ if __name__ == "__main__":
     feed_forward_net = ShallowNeuralNetwork(config.N_INPUTS, best_result.config['hidden1'], best_result.config['hidden2'], best_result.config['hidden3'], config.N_OUTPUTS).to(device)
     feed_forward_net.my_device = device
 
-    feed_forward_net.load_state_dict(state_dict)
+    feed_forward_net.load_state_dict(model)
 
     loss_fn = nn.MSELoss()
 
