@@ -74,21 +74,26 @@ if __name__ == "__main__":
         reduction_factor=2
     )
 
+    reporter = CLIReporter(
+        metric_columns=["loss", "accuracy", "training_iteration"]
+    )
+
     tuner = tune.Tuner(
         tune.with_resources(
             tune.with_parameters(partial(hyperparameter_optimizer, train_data_loader=train_id, test_dataloader=test_id)),
             resources={"cpu":6, "gpu":0}
         ),
         tune_config=tune.TuneConfig(
-            metric="loss",
-            mode="min",
+            #metric="loss", 
+            #mode="min",
             scheduler=scheduler,
             num_samples=num_samples
         ),
         param_space=search_space,
         run_config=air.RunConfig(
             name="test_experiment",
-            local_dir="./tune_results"
+            local_dir="./tune_results",
+            progress_reporter=reporter
         ),
     )
 
